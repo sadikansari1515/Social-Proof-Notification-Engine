@@ -1,33 +1,44 @@
 import { useEffect, useState } from "react";
+import { io } from "socket.io-client";
+
 import NotificationPopup from "../components/NotificationPopup";
 
+const socket = io("http://localhost:5000");
+
 function Home() {
-  const [notification, setNotification] = useState({
-    name: "Someone",
-    location: "Delhi",
-    message: "purchased this course",
-    time: "2 minutes ago",
-  });
+  const [notification, setNotification] = useState(null);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setNotification(null);
-    }, 6000);
+    socket.on("social-proof-notification", (data) => {
+      setNotification(data);
 
-    return () => clearTimeout(timer);
+      setTimeout(() => {
+        setNotification(null);
+      }, 6000);
+    });
+
+    return () => {
+      socket.off("social-proof-notification");
+    };
   }, []);
 
   return (
     <div className="home">
+      {/* Your existing navbar */}
+
       <nav className="navbar">
         <h2>SocialProof</h2>
 
         <div className="nav-links">
           <a href="#features">Features</a>
+
           <a href="#reviews">Reviews</a>
+
           <button>Login</button>
         </div>
       </nav>
+
+      {/* Your existing course section */}
 
       <main className="hero">
         <div className="hero-content">

@@ -1,8 +1,12 @@
 const express = require("express");
 const http = require("http");
 const cors = require("cors");
+
 const { Server } = require("socket.io");
+
 require("dotenv").config();
+
+const eventRoutes = require("./routes/eventRoutes");
 
 const app = express();
 
@@ -16,7 +20,10 @@ const io = new Server(server, {
 });
 
 app.use(cors());
+
 app.use(express.json());
+
+app.set("io", io);
 
 app.get("/", (req, res) => {
   res.json({
@@ -24,12 +31,10 @@ app.get("/", (req, res) => {
   });
 });
 
+app.use("/api/events", eventRoutes);
+
 io.on("connection", (socket) => {
   console.log("User connected:", socket.id);
-
-  socket.emit("welcome", {
-    message: "Welcome to Social Proof Engine!",
-  });
 
   socket.on("disconnect", () => {
     console.log("User disconnected:", socket.id);

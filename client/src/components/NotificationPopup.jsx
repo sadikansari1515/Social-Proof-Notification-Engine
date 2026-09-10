@@ -5,7 +5,12 @@ function NotificationPopup({ notification, onClose }) {
 
       <div className="notification-content">
         <div className="notification-title">
-          {notification.name} from {notification.location}
+          {notification.name}
+
+          <span className="notification-location">
+            {" "}
+            from {notification.location}
+          </span>
         </div>
 
         <div className="notification-message">{notification.message}</div>
