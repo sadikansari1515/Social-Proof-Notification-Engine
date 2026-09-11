@@ -4,11 +4,18 @@ const cors = require("cors");
 
 const { Server } = require("socket.io");
 
+require("dotenv").config();  
+
 require("dotenv").config();
+
+const dns = require("dns");
+dns.setServers(["8.8.8.8", "1.1.1.1"]);
+
+const connectDB = require("./config/db");
 
 const eventRoutes = require("./routes/eventRoutes");
 
-const app = express();
+const app = express();  
 
 const server = http.createServer(app);
 
@@ -40,6 +47,8 @@ io.on("connection", (socket) => {
     console.log("User disconnected:", socket.id);
   });
 });
+
+connectDB();  
 
 const PORT = process.env.PORT || 5000;
 

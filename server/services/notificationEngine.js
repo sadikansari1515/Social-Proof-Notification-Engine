@@ -1,6 +1,7 @@
 function createPurchaseNotification(purchase) {
 
     return {
+
         type: "purchase",
 
         name: purchase.name,
@@ -11,16 +12,19 @@ function createPurchaseNotification(purchase) {
 
         message: `purchased ${purchase.product}`,
 
-        time: "just now",
+        time: "just now"
 
-        createdAt: new Date()
     };
+
 }
 
 
 function sendNotification(io, notification) {
 
-    io.emit("social-proof-notification", notification);
+    io.emit(
+        "social-proof-notification",
+        notification
+    );
 
 }
 
