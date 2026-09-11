@@ -15,6 +15,8 @@ const connectDB = require("./config/db");
 
 const eventRoutes = require("./routes/eventRoutes");
 
+const analyticsRoutes = require("./routes/analyticsRoutes");
+
 const app = express();  
 
 const server = http.createServer(app);
@@ -39,6 +41,8 @@ app.get("/", (req, res) => {
 });
 
 app.use("/api/events", eventRoutes);
+
+app.use("/api/analytics", analyticsRoutes);
 
 io.on("connection", (socket) => {
   console.log("User connected:", socket.id);

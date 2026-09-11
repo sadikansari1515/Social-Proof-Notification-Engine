@@ -3,6 +3,8 @@ import { io } from "socket.io-client";
 
 import NotificationPopup from "../components/NotificationPopup";
 
+import { trackConversion } from "../services/analytics";
+
 const socket = io("http://localhost:5000");
 
 function Home() {
@@ -76,7 +78,18 @@ function Home() {
             <span className="discount">50% OFF</span>
           </div>
 
-          <button className="buy-button">Buy Course →</button>
+          <button
+            className="buy-button"
+            onClick={() => {
+              if (notification?._id) {
+                trackConversion(notification._id);
+              }
+
+              alert("Course purchased successfully!");
+            }}
+          >
+            Buy Course
+          </button>
         </div>
       </main>
 
