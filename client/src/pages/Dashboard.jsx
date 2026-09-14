@@ -1,6 +1,11 @@
+import AnalyticsChart from "../components/AnalyticsChart";
+
 import { useEffect, useState } from "react";
+import { io } from "socket.io-client";
 
 import StatCard from "../components/StatCard";
+
+const socket = io("http://localhost:5000");
 
 function Dashboard() {
   const [summary, setSummary] = useState(null);
@@ -9,32 +14,44 @@ function Dashboard() {
 
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    async function fetchAnalytics() {
-      try {
-        const summaryResponse = await fetch(
-          "http://localhost:5000/api/analytics/summary",
-        );
+  async function fetchAnalytics() {
+    try {
+      const summaryResponse = await fetch(
+        "http://localhost:5000/api/analytics/summary",
+      );
 
-        const summaryData = await summaryResponse.json();
+      const summaryData = await summaryResponse.json();
 
-        setSummary(summaryData);
+      setSummary(summaryData);
 
-        const notificationResponse = await fetch(
-          "http://localhost:5000/api/analytics/notifications",
-        );
+      const notificationResponse = await fetch(
+        "http://localhost:5000/api/analytics/notifications",
+      );
 
-        const notificationData = await notificationResponse.json();
+      const notificationData = await notificationResponse.json();
 
-        setNotifications(notificationData);
-      } catch (error) {
-        console.error("Failed to load analytics:", error);
-      } finally {
-        setLoading(false);
-      }
+      setNotifications(notificationData);
+    } catch (error) {
+      console.error("Failed to load analytics:", error);
+    } finally {
+      setLoading(false);
     }
+  }
 
+  useEffect(() => {
+    // Initial data
     fetchAnalytics();
+
+    // Real-time updates
+    socket.on("analytics-updated", (data) => {
+      console.log("Analytics updated:", data);
+
+      fetchAnalytics();
+    });
+
+    return () => {
+      socket.off("analytics-updated");
+    };
   }, []);
 
   if (loading) {
@@ -51,9 +68,14 @@ function Dashboard() {
 
           <p>Monitor your social proof performance</p>
         </div>
+
+        <div className="live-status">
+          <span className="live-dot">●</span>
+          Live
+        </div>
       </div>
 
-      {/* STAT CARDS */}
+      {/* STATS */}
 
       {summary && (
         <div className="stats-grid">
@@ -80,8 +102,10 @@ function Dashboard() {
           />
         </div>
       )}
+      
+      {summary && <AnalyticsChart summary={summary} />}
 
-      {/* NOTIFICATION TABLE */}
+      {/* TABLE */}
 
       <div className="analytics-section">
         <h2>Notification Performance</h2>
@@ -91,12 +115,19 @@ function Dashboard() {
             <thead>
               <tr>
                 <th>Customer</th>
+
                 <th>Location</th>
+
                 <th>Product</th>
+
                 <th>Impressions</th>
+
                 <th>Clicks</th>
+
                 <th>Conversions</th>
+
                 <th>CTR</th>
+
                 <th>Conversion</th>
               </tr>
             </thead>

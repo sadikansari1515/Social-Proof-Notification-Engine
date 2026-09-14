@@ -32,6 +32,13 @@ router.post("/impression", async (req, res) => {
 
     await notification.save();
 
+    const io = req.app.get("io");
+
+    io.emit("analytics-updated", {
+      type: "impression",
+      notificationId,
+    });
+
     // Store analytics event
     await Event.create({
       type: "impression",
@@ -79,6 +86,13 @@ router.post("/click", async (req, res) => {
 
     await notification.save();
 
+    const io = req.app.get("io");
+
+io.emit("analytics-updated", {
+    type: "click",
+    notificationId
+});
+
     // Store analytics event
     await Event.create({
       type: "click",
@@ -125,6 +139,11 @@ router.post("/conversion", async (req, res) => {
     notification.conversions += 1;
 
     await notification.save();
+
+    io.emit("analytics-updated", {
+    type: "conversion",
+    notificationId
+});
 
     // Store analytics event
     await Event.create({
