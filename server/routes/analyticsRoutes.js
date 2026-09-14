@@ -146,4 +146,119 @@ router.post("/conversion", async (req, res) => {
   }
 });
 
+// ===============================
+// ANALYTICS SUMMARY
+// ===============================
+
+router.get("/summary", async (req, res) => {
+  try {
+    const result = await Notification.aggregate([
+      {
+        $group: {
+          _id: null,
+
+          totalImpressions: {
+            $sum: "$impressions",
+          },
+
+          totalClicks: {
+            $sum: "$clicks",
+          },
+
+          totalConversions: {
+            $sum: "$conversions",
+          },
+        },
+      },
+    ]);
+
+    const data = result[0] || {
+      totalImpressions: 0,
+      totalClicks: 0,
+      totalConversions: 0,
+    };
+
+    const ctr =
+      data.totalImpressions > 0
+        ? (data.totalClicks / data.totalImpressions) * 100
+        : 0;
+
+    const conversionRate =
+      data.totalClicks > 0
+        ? (data.totalConversions / data.totalClicks) * 100
+        : 0;
+
+    res.json({
+      totalImpressions: data.totalImpressions,
+
+      totalClicks: data.totalClicks,
+
+      totalConversions: data.totalConversions,
+
+      ctr: Number(ctr.toFixed(2)),
+
+      conversionRate: Number(conversionRate.toFixed(2)),
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      message: "Failed to fetch analytics summary",
+
+      error: error.message,
+    });
+  }
+});
+
+// ===============================
+// NOTIFICATION PERFORMANCE
+// ===============================
+
+router.get("/notifications", async (req, res) => {
+  try {
+    const notifications = await Notification.find().sort({ createdAt: -1 });
+
+    const data = notifications.map((notification) => {
+      const ctr =
+        notification.impressions > 0
+          ? (notification.clicks / notification.impressions) * 100
+          : 0;
+
+      const conversionRate =
+        notification.clicks > 0
+          ? (notification.conversions / notification.clicks) * 100
+          : 0;
+
+      return {
+        id: notification._id,
+        name: notification.name,
+        location: notification.location,
+        product: notification.product,
+
+        impressions: notification.impressions,
+
+        clicks: notification.clicks,
+
+        conversions: notification.conversions,
+
+        ctr: Number(ctr.toFixed(2)),
+
+        conversionRate: Number(conversionRate.toFixed(2)),
+
+        createdAt: notification.createdAt,
+      };
+    });
+
+    res.json(data);
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      message: "Failed to fetch notification analytics",
+
+      error: error.message,
+    });
+  }
+});
+
 module.exports = router;
