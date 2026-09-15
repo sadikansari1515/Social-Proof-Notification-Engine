@@ -17,6 +17,9 @@ const eventRoutes = require("./routes/eventRoutes");
 
 const analyticsRoutes = require("./routes/analyticsRoutes");
 
+const campaignRoutes =
+    require("./routes/campaignRoutes");
+
 const app = express();  
 
 const server = http.createServer(app);
@@ -43,6 +46,11 @@ app.get("/", (req, res) => {
 app.use("/api/events", eventRoutes);
 
 app.use("/api/analytics", analyticsRoutes);
+app.use(
+    "/api/campaigns",
+    campaignRoutes
+);
+
 
 io.on("connection", (socket) => {
   console.log("User connected:", socket.id);

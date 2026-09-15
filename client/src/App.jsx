@@ -1,7 +1,7 @@
-import Dashboard from "./pages/Dashboard";
+import Campaigns from "./pages/Campaigns";
 
 function App() {
-    return <Dashboard />;
+    return <Campaigns />;
 }
 
 export default App;

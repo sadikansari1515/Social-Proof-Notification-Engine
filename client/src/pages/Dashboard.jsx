@@ -102,7 +102,7 @@ function Dashboard() {
           />
         </div>
       )}
-      
+
       {summary && <AnalyticsChart summary={summary} />}
 
       {/* TABLE */}
