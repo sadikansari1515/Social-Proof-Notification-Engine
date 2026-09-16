@@ -5,6 +5,11 @@ const notificationSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  campaignId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Campaign",
+    default: null,
+  },
 
   name: {
     type: String,

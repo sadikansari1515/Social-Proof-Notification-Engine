@@ -2,7 +2,8 @@ const express = require("express");
 
 const Event = require("../models/Event");
 const Notification = require("../models/Notification");
-const Campaign = require("../models/Campaign");
+
+const { findBestCampaign } = require("../services/campaignService");
 
 const { sendNotification } = require("../services/notificationEngine");
 
@@ -27,21 +28,20 @@ router.post("/purchase", async (req, res) => {
     }
 
     // =====================================
-    // 2. FIND ACTIVE CAMPAIGN
+    // 2. FIND BEST CAMPAIGN
     // =====================================
 
-    const campaign = await Campaign.findOne({
-      active: true,
-      product: product,
-    });
+    const campaign = await findBestCampaign(product, location);
 
     // =====================================
-    // 3. IF NO CAMPAIGN EXISTS
+    // 3. NO ELIGIBLE CAMPAIGN
     // =====================================
 
     if (!campaign) {
       return res.status(200).json({
-        message: "Purchase recorded but no active campaign found",
+        message: "No eligible campaign found",
+
+        notification: null,
       });
     }
 
@@ -59,6 +59,8 @@ router.post("/purchase", async (req, res) => {
       product: product,
 
       message: campaign.message,
+
+      campaignId: campaign._id,
 
       time: "just now",
 
@@ -85,6 +87,10 @@ router.post("/purchase", async (req, res) => {
       product: product,
 
       notificationId: notification._id,
+
+      metadata: {
+        campaignId: campaign._id,
+      },
     });
 
     // =====================================
@@ -96,11 +102,13 @@ router.post("/purchase", async (req, res) => {
     sendNotification(io, notification);
 
     // =====================================
-    // 8. SEND RESPONSE
+    // 8. RESPONSE
     // =====================================
 
     res.status(201).json({
       message: "Purchase event processed successfully",
+
+      campaignId: campaign._id,
 
       notification,
     });
