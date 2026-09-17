@@ -2,21 +2,22 @@ import { useEffect, useState } from "react";
 import { io } from "socket.io-client";
 
 import NotificationPopup from "../components/NotificationPopup";
-
-import { trackConversion } from "../services/analytics";
+import { getSessionId } from "../utils/session";
 
 const socket = io("http://localhost:5000");
 
 function Home() {
   const [notification, setNotification] = useState(null);
 
+  // =====================================
+  // RECEIVE NOTIFICATION
+  // =====================================
+
   useEffect(() => {
     socket.on("social-proof-notification", (data) => {
-      setNotification(data);
+      console.log("Notification received:", data);
 
-      setTimeout(() => {
-        setNotification(null);
-      }, 6000);
+      setNotification(data);
     });
 
     return () => {
@@ -24,74 +25,56 @@ function Home() {
     };
   }, []);
 
+  // =====================================
+  // TEST PURCHASE
+  // =====================================
+
+  const createPurchase = async () => {
+    try {
+      const response = await fetch(
+        "http://localhost:5000/api/events/purchase",
+        {
+          method: "POST",
+
+          headers: {
+            "Content-Type": "application/json",
+          },
+
+          body: JSON.stringify({
+            name: "Rahul",
+
+            location: "Delhi",
+
+            product: "React Masterclass",
+
+            sessionId: getSessionId(),
+          }),
+        },
+      );
+
+      const data = await response.json();
+
+      console.log("Purchase response:", data);
+    } catch (error) {
+      console.error("Purchase failed:", error);
+    }
+  };
+
+  // =====================================
+  // UI
+  // =====================================
+
   return (
-    <div className="home">
-      {/* Your existing navbar */}
+    <div>
+      <h1>Full Stack Web Development</h1>
 
-      <nav className="navbar">
-        <h2>SocialProof</h2>
+      <p>Learn React, Node.js, Express and MongoDB.</p>
 
-        <div className="nav-links">
-          <a href="#features">Features</a>
+      {/* TEST PURCHASE BUTTON */}
 
-          <a href="#reviews">Reviews</a>
+      <button onClick={createPurchase}>Test Purchase</button>
 
-          <button>Login</button>
-        </div>
-      </nav>
-
-      {/* Your existing course section */}
-
-      <main className="hero">
-        <div className="hero-content">
-          <span className="badge">🚀 Best Selling Course</span>
-
-          <h1>Full Stack Web Development</h1>
-
-          <p className="description">
-            Learn HTML, CSS, JavaScript, React, Node.js, Express and MongoDB by
-            building real-world projects.
-          </p>
-
-          <div className="stats">
-            <div>
-              <strong>⭐ 4.8</strong>
-              <span>Rating</span>
-            </div>
-
-            <div>
-              <strong>1,250+</strong>
-              <span>Students</span>
-            </div>
-
-            <div>
-              <strong>42 Hours</strong>
-              <span>Content</span>
-            </div>
-          </div>
-
-          <div className="price">
-            <span className="old-price">₹1,999</span>
-
-            <strong>₹999</strong>
-
-            <span className="discount">50% OFF</span>
-          </div>
-
-          <button
-            className="buy-button"
-            onClick={() => {
-              if (notification?._id) {
-                trackConversion(notification._id);
-              }
-
-              alert("Course purchased successfully!");
-            }}
-          >
-            Buy Course
-          </button>
-        </div>
-      </main>
+      {/* NOTIFICATION */}
 
       {notification && (
         <NotificationPopup
