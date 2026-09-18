@@ -6,25 +6,58 @@ import { getSessionId } from "../utils/session";
 
 const socket = io("http://localhost:5000");
 
+const visitorLocation = "Delhi";
+
 function Home() {
   const [notification, setNotification] = useState(null);
 
   // =====================================
   // RECEIVE NOTIFICATION
   // =====================================
+useEffect(() => {
 
-  useEffect(() => {
-    socket.on("social-proof-notification", (data) => {
-      console.log("Notification received:", data);
+    const sessionId =
+        getSessionId();
 
-      setNotification(data);
-    });
+
+    // Join session room
+    socket.emit(
+        "join-session",
+        sessionId
+    );
+
+
+    // Join location room
+    socket.emit(
+        "join-location",
+        visitorLocation
+    );
+
+
+    socket.on(
+        "social-proof-notification",
+        (data) => {
+
+            console.log(
+                "Notification received:",
+                data
+            );
+
+            setNotification(data);
+
+        }
+    );
+
 
     return () => {
-      socket.off("social-proof-notification");
-    };
-  }, []);
 
+        socket.off(
+            "social-proof-notification"
+        );
+
+    };
+
+}, []);
   // =====================================
   // TEST PURCHASE
   // =====================================

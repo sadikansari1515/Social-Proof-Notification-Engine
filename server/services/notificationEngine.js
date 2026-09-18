@@ -10,18 +10,52 @@ function createPurchaseNotification(purchase) {
 
         product: purchase.product,
 
-        message: `purchased ${purchase.product}`,
+        message:
+            purchase.message ||
+            `purchased ${purchase.product}`,
 
-        time: "just now"
+        time: "just now",
+
+        createdAt: new Date()
 
     };
 
 }
 
 
-function sendNotification(io, notification) {
+// =====================================
+// SEND TO SESSION
+// =====================================
 
-    io.emit(
+function sendNotificationToSession(
+    io,
+    sessionId,
+    notification
+) {
+
+    io.to(
+        `session:${sessionId}`
+    ).emit(
+        "social-proof-notification",
+        notification
+    );
+
+}
+
+
+// =====================================
+// SEND TO LOCATION
+// =====================================
+
+function sendNotificationToLocation(
+    io,
+    location,
+    notification
+) {
+
+    io.to(
+        `location:${location.toLowerCase()}`
+    ).emit(
         "social-proof-notification",
         notification
     );
@@ -30,6 +64,11 @@ function sendNotification(io, notification) {
 
 
 module.exports = {
+
     createPurchaseNotification,
-    sendNotification
+
+    sendNotificationToSession,
+
+    sendNotificationToLocation
+
 };
