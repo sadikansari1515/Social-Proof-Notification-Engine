@@ -1,22 +1,32 @@
-function createPurchaseNotification(purchase) {
+function createPurchaseNotification(
+    purchase,
+    campaign
+) {
 
     return {
 
         type: "purchase",
 
-        name: purchase.name,
+        name:
+            purchase.name,
 
-        location: purchase.location,
+        location:
+            purchase.location,
 
-        product: purchase.product,
+        product:
+            purchase.product,
 
         message:
-            purchase.message ||
-            `purchased ${purchase.product}`,
+            campaign.message,
 
-        time: "just now",
+        campaignId:
+            campaign._id,
 
-        createdAt: new Date()
+        time:
+            "just now",
+
+        createdAt:
+            new Date()
 
     };
 
@@ -24,37 +34,17 @@ function createPurchaseNotification(purchase) {
 
 
 // =====================================
-// SEND TO SESSION
+// SEND TO VISITOR
 // =====================================
 
-function sendNotificationToSession(
+function sendNotificationToVisitor(
     io,
-    sessionId,
+    visitor,
     notification
 ) {
 
     io.to(
-        `session:${sessionId}`
-    ).emit(
-        "social-proof-notification",
-        notification
-    );
-
-}
-
-
-// =====================================
-// SEND TO LOCATION
-// =====================================
-
-function sendNotificationToLocation(
-    io,
-    location,
-    notification
-) {
-
-    io.to(
-        `location:${location.toLowerCase()}`
+        `session:${visitor.sessionId}`
     ).emit(
         "social-proof-notification",
         notification
@@ -67,8 +57,6 @@ module.exports = {
 
     createPurchaseNotification,
 
-    sendNotificationToSession,
-
-    sendNotificationToLocation
+    sendNotificationToVisitor
 
 };

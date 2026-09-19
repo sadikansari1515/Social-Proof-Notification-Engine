@@ -4,6 +4,8 @@ import { io } from "socket.io-client";
 import NotificationPopup from "../components/NotificationPopup";
 import { getSessionId } from "../utils/session";
 
+
+
 const socket = io("http://localhost:5000");
 
 const visitorLocation = "Delhi";
@@ -20,19 +22,22 @@ useEffect(() => {
         getSessionId();
 
 
-    // Join session room
+    // =====================================
+    // REGISTER VISITOR
+    // =====================================
+
     socket.emit(
-        "join-session",
-        sessionId
+        "register-visitor",
+        {
+            sessionId,
+            location: visitorLocation
+        }
     );
 
 
-    // Join location room
-    socket.emit(
-        "join-location",
-        visitorLocation
-    );
-
+    // =====================================
+    // RECEIVE NOTIFICATION
+    // =====================================
 
     socket.on(
         "social-proof-notification",

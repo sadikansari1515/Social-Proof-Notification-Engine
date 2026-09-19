@@ -5,7 +5,12 @@ const Notification = require("../models/Notification");
 
 const { findBestCampaign } = require("../services/campaignService");
 
-const { sendNotificationToSession } = require("../services/notificationEngine");
+const { findEligibleVisitors } = require("../services/targetingService");
+
+const {
+  createPurchaseNotification,
+  sendNotificationToVisitor,
+} = require("../services/notificationEngine");
 
 const router = express.Router();
 
@@ -18,7 +23,7 @@ router.post("/purchase", async (req, res) => {
     const { name, location, product, sessionId } = req.body;
 
     // =====================================
-    // 1. VALIDATE REQUEST
+    // 1. VALIDATE
     // =====================================
 
     if (!name || !location || !product || !sessionId) {
@@ -28,14 +33,10 @@ router.post("/purchase", async (req, res) => {
     }
 
     // =====================================
-    // 2. FIND BEST CAMPAIGN
+    // 2. FIND CAMPAIGN
     // =====================================
 
-    const campaign = await findBestCampaign(product, location, sessionId);
-
-    // =====================================
-    // 3. NO ELIGIBLE CAMPAIGN
-    // =====================================
+    const campaign = await findBestCampaign(product, location);
 
     if (!campaign) {
       return res.status(200).json({
@@ -46,67 +47,80 @@ router.post("/purchase", async (req, res) => {
     }
 
     // =====================================
-    // 4. CREATE NOTIFICATION
+    // 3. FIND VISITORS
     // =====================================
 
-    const notificationData = {
-      type: "purchase",
-
-      name: name,
-
-      location: location,
-
-      product: product,
-
-      message: campaign.message,
-
-      campaignId: campaign._id,
-
-      sessionId: sessionId,
-
-      time: "just now",
-
-      createdAt: new Date(),
-    };
+    const visitors = await findEligibleVisitors(campaign);
 
     // =====================================
-    // 5. SAVE NOTIFICATION
+    // 4. NO VISITORS
     // =====================================
 
-    const notification = await Notification.create(notificationData);
+    if (visitors.length === 0) {
+      return res.status(200).json({
+        message: "Campaign found but no eligible visitors",
+
+        notification: null,
+      });
+    }
 
     // =====================================
-    // 6. SAVE PURCHASE EVENT
+    // 5. CREATE BASE NOTIFICATION
     // =====================================
 
-    await Event.create({
-      type: "purchase",
-
-      name: name,
-
-      location: location,
-
-      product: product,
-
-      notificationId: notification._id,
-
-      sessionId: sessionId,
-
-      metadata: {
-        campaignId: campaign._id,
+    const notificationData = createPurchaseNotification(
+      {
+        name,
+        location,
+        product,
       },
-    });
+      campaign,
+    );
 
     // =====================================
-    // 7. SEND NOTIFICATION
+    // 6. SEND TO EACH VISITOR
     // =====================================
 
-    const io = req.app.get("io");
+    for (const visitor of visitors) {
+      const notification = await Notification.create({
+        ...notificationData,
 
-    sendNotificationToSession(io, sessionId, notification);
+        sessionId: visitor.sessionId,
+      });
+
+      // Send notification
+      sendNotificationToVisitor(
+        req.app.get("io"),
+
+        visitor,
+
+        notification,
+      );
+
+      // Save event
+      await Event.create({
+        type: "purchase",
+
+        name,
+
+        location,
+
+        product,
+
+        notificationId: notification._id,
+
+        sessionId: visitor.sessionId,
+
+        metadata: {
+          campaignId: campaign._id,
+
+          sourceSessionId: sessionId,
+        },
+      });
+    }
 
     // =====================================
-    // 8. RESPONSE
+    // 7. RESPONSE
     // =====================================
 
     res.status(201).json({
@@ -114,7 +128,7 @@ router.post("/purchase", async (req, res) => {
 
       campaignId: campaign._id,
 
-      notification,
+      visitorsNotified: visitors.length,
     });
   } catch (error) {
     console.error("Purchase event error:", error);

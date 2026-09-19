@@ -19,6 +19,8 @@ const analyticsRoutes = require("./routes/analyticsRoutes");
 
 const campaignRoutes = require("./routes/campaignRoutes");
 
+const Visitor = require("./models/Visitor");
+
 const app = express();
 
 const server = http.createServer(app);
@@ -48,43 +50,131 @@ app.use("/api/analytics", analyticsRoutes);
 app.use("/api/campaigns", campaignRoutes);
 
 io.on("connection", (socket) => {
-  console.log("User connected:", socket.id);
 
-  // =====================================
-  // JOIN SESSION ROOM
-  // =====================================
+    console.log(
+        "User connected:",
+        socket.id
+    );
 
-  socket.on("join-session", (sessionId) => {
-    if (!sessionId) {
-      return;
-    }
 
-    socket.join(`session:${sessionId}`);
+    // =====================================
+    // REGISTER VISITOR
+    // =====================================
 
-    console.log(`Socket ${socket.id} joined session:${sessionId}`);
-  });
+    socket.on(
+        "register-visitor",
+        async ({
+            sessionId,
+            location
+        }) => {
 
-  // =====================================
-  // JOIN LOCATION ROOM
-  // =====================================
+            try {
 
-  socket.on("join-location", (location) => {
-    if (!location) {
-      return;
-    }
+                if (!sessionId) {
+                    return;
+                }
 
-    socket.join(`location:${location.toLowerCase()}`);
 
-    console.log(`Socket ${socket.id} joined location:${location}`);
-  });
+                await Visitor.findOneAndUpdate(
 
-  // =====================================
-  // DISCONNECT
-  // =====================================
+                    { sessionId },
 
-  socket.on("disconnect", () => {
-    console.log("User disconnected:", socket.id);
-  });
+                    {
+                        sessionId,
+
+                        location:
+                            location || "Unknown",
+
+                        socketId:
+                            socket.id,
+
+                        online: true,
+
+                        lastSeen:
+                            new Date()
+                    },
+
+                    {
+                        upsert: true,
+                        new: true
+                    }
+
+                );
+
+
+                // Session room
+                socket.join(
+                    `session:${sessionId}`
+                );
+
+
+                // Location room
+                if (location) {
+
+                    socket.join(
+                        `location:${location.toLowerCase()}`
+                    );
+
+                }
+
+
+                console.log(
+                    `Visitor registered: ${sessionId}`
+                );
+
+            } catch (error) {
+
+                console.error(
+                    "Visitor registration error:",
+                    error
+                );
+
+            }
+
+        }
+    );
+
+
+    // =====================================
+    // DISCONNECT
+    // =====================================
+
+    socket.on("disconnect", async () => {
+
+        try {
+
+            await Visitor.findOneAndUpdate(
+
+                {
+                    socketId: socket.id
+                },
+
+                {
+                    online: false,
+
+                    lastSeen:
+                        new Date()
+                }
+
+            );
+
+        } catch (error) {
+
+            console.error(
+                "Visitor disconnect error:",
+                error
+            );
+
+        }
+
+
+        console.log(
+            "User disconnected:",
+            socket.id
+        );
+
+    });
+
 });
 
 connectDB();
