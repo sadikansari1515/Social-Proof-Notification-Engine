@@ -45,6 +45,22 @@ router.post("/purchase", async (req, res) => {
         notification: null,
       });
     }
+    
+    await Event.create({
+      type: "purchase",
+
+      name,
+
+      location,
+
+      product,
+
+      sessionId,
+
+      metadata: {
+        source: "purchase",
+      },
+    });
 
     // =====================================
     // 3. FIND VISITORS

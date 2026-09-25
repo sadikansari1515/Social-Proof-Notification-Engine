@@ -10,53 +10,138 @@ const router = express.Router();
 // ===============================
 
 router.post("/impression", async (req, res) => {
-  try {
-    const { notificationId, sessionId } = req.body;
 
-    if (!notificationId) {
-      return res.status(400).json({
-        message: "notificationId is required",
-      });
+    try {
+
+        const {
+            notificationId,
+            sessionId
+        } = req.body;
+
+
+        // =====================================
+        // VALIDATION
+        // =====================================
+
+        if (
+            !notificationId ||
+            !sessionId
+        ) {
+
+            return res.status(400).json({
+
+                message:
+                    "notificationId and sessionId are required"
+
+            });
+
+        }
+
+
+        // =====================================
+        // FIND NOTIFICATION
+        // =====================================
+
+        const notification =
+            await Notification.findById(
+                notificationId
+            );
+
+
+        if (!notification) {
+
+            return res.status(404).json({
+
+                message:
+                    "Notification not found"
+
+            });
+
+        }
+
+
+        // =====================================
+        // UPDATE IMPRESSION
+        // =====================================
+
+        notification.impressions += 1;
+
+        await notification.save();
+
+
+        // =====================================
+        // SAVE IMPRESSION EVENT
+        // =====================================
+
+        await Event.create({
+
+            type: "impression",
+
+            notificationId:
+                notification._id,
+
+            sessionId:
+
+                sessionId,
+
+            metadata: {
+
+                campaignId:
+                    notification.campaignId
+
+            }
+
+        });
+
+
+        // =====================================
+        // REAL-TIME ANALYTICS
+        // =====================================
+
+        const io =
+            req.app.get("io");
+
+
+        if (io) {
+
+            io.emit(
+                "analytics-updated",
+                {
+                    type: "impression",
+                    notificationId
+                }
+            );
+
+        }
+
+
+        res.status(200).json({
+
+            message:
+                "Impression tracked successfully"
+
+        });
+
+    } catch (error) {
+
+        console.error(
+            "Impression tracking error:",
+            error
+        );
+
+
+        res.status(500).json({
+
+            message:
+                "Failed to track impression",
+
+            error:
+                error.message
+
+        });
+
     }
 
-    const notification = await Notification.findById(notificationId);
-
-    if (!notification) {
-      return res.status(404).json({
-        message: "Notification not found",
-      });
-    }
-
-    // Increase impression count
-    notification.impressions += 1;
-
-    await notification.save();
-
-    const io = req.app.get("io");
-
-    io.emit("analytics-updated", {
-      type: "impression",
-      notificationId,
-    });
-
-    // Store analytics event
-    await Event.create({
-      type: "impression",
-      notificationId,
-      sessionId,
-    });
-
-    res.status(201).json({
-      message: "Impression tracked successfully",
-    });
-  } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      message: "Failed to track impression",
-      error: error.message,
-    });
-  }
 });
 
 // ===============================

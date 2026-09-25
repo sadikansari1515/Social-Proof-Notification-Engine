@@ -1,23 +1,28 @@
 const Visitor = require("../models/Visitor");
-const Notification = require("../models/Notification");
+const Event = require("../models/Event");
 
 
 // =====================================
 // FIND ELIGIBLE VISITORS
 // =====================================
 
-async function findEligibleVisitors(
-    campaign
-) {
+async function findEligibleVisitors(campaign) {
 
-    const visitors =
-        await Visitor.find({
-            online: true
-        });
+    // =====================================
+    // 1. FIND ONLINE VISITORS
+    // =====================================
+
+    const visitors = await Visitor.find({
+        online: true
+    });
 
 
     const eligibleVisitors = [];
 
+
+    // =====================================
+    // 2. CHECK EVERY VISITOR
+    // =====================================
 
     for (const visitor of visitors) {
 
@@ -41,23 +46,29 @@ async function findEligibleVisitors(
 
 
         // =====================================
-        // FREQUENCY CHECK
+        // IMPRESSION COUNT
         // =====================================
 
-        const notificationCount =
-            await Notification.countDocuments({
+        const impressionCount =
+            await Event.countDocuments({
 
-                campaignId:
-                    campaign._id,
+                type: "impression",
 
                 sessionId:
-                    visitor.sessionId
+                    visitor.sessionId,
+
+                "metadata.campaignId":
+                    campaign._id
 
             });
 
 
+        // =====================================
+        // FREQUENCY LIMIT
+        // =====================================
+
         if (
-            notificationCount >=
+            impressionCount >=
             campaign.frequencyLimit
         ) {
 

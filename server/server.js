@@ -6,9 +6,8 @@ const { Server } = require("socket.io");
 
 require("dotenv").config();
 
-require("dotenv").config();
-
 const dns = require("dns");
+
 dns.setServers(["8.8.8.8", "1.1.1.1"]);
 
 const connectDB = require("./config/db");
@@ -47,134 +46,80 @@ app.get("/", (req, res) => {
 app.use("/api/events", eventRoutes);
 
 app.use("/api/analytics", analyticsRoutes);
+
 app.use("/api/campaigns", campaignRoutes);
 
 io.on("connection", (socket) => {
+  console.log("User connected:", socket.id);
 
-    console.log(
-        "User connected:",
-        socket.id
-    );
+  // =====================================
+  // REGISTER VISITOR
+  // =====================================
 
+  socket.on("register-visitor", async ({ sessionId, location }) => {
+    try {
+      if (!sessionId) {
+        return;
+      }
 
-    // =====================================
-    // REGISTER VISITOR
-    // =====================================
+      await Visitor.findOneAndUpdate(
+        { sessionId },
 
-    socket.on(
-        "register-visitor",
-        async ({
-            sessionId,
-            location
-        }) => {
+        {
+          sessionId,
 
-            try {
+          location: location || "Unknown",
 
-                if (!sessionId) {
-                    return;
-                }
+          socketId: socket.id,
 
+          online: true,
 
-                await Visitor.findOneAndUpdate(
+          lastSeen: new Date(),
+        },
 
-                    { sessionId },
+        {
+          upsert: true,
+          new: true,
+        },
+      );
 
-                    {
-                        sessionId,
+      // Session room
+      socket.join(`session:${sessionId}`);
 
-                        location:
-                            location || "Unknown",
+      // Location room
+      if (location) {
+        socket.join(`location:${location.toLowerCase()}`);
+      }
 
-                        socketId:
-                            socket.id,
+      console.log(`Visitor registered: ${sessionId}`);
+    } catch (error) {
+      console.error("Visitor registration error:", error);
+    }
+  });
 
-                        online: true,
+  // =====================================
+  // DISCONNECT
+  // =====================================
 
-                        lastSeen:
-                            new Date()
-                    },
+  socket.on("disconnect", async () => {
+    try {
+      await Visitor.findOneAndUpdate(
+        {
+          socketId: socket.id,
+        },
 
-                    {
-                        upsert: true,
-                        new: true
-                    }
+        {
+          online: false,
 
-                );
+          lastSeen: new Date(),
+        },
+      );
+    } catch (error) {
+      console.error("Visitor disconnect error:", error);
+    }
 
-
-                // Session room
-                socket.join(
-                    `session:${sessionId}`
-                );
-
-
-                // Location room
-                if (location) {
-
-                    socket.join(
-                        `location:${location.toLowerCase()}`
-                    );
-
-                }
-
-
-                console.log(
-                    `Visitor registered: ${sessionId}`
-                );
-
-            } catch (error) {
-
-                console.error(
-                    "Visitor registration error:",
-                    error
-                );
-
-            }
-
-        }
-    );
-
-
-    // =====================================
-    // DISCONNECT
-    // =====================================
-
-    socket.on("disconnect", async () => {
-
-        try {
-
-            await Visitor.findOneAndUpdate(
-
-                {
-                    socketId: socket.id
-                },
-
-                {
-                    online: false,
-
-                    lastSeen:
-                        new Date()
-                }
-
-            );
-
-        } catch (error) {
-
-            console.error(
-                "Visitor disconnect error:",
-                error
-            );
-
-        }
-
-
-        console.log(
-            "User disconnected:",
-            socket.id
-        );
-
-    });
-
+    console.log("User disconnected:", socket.id);
+  });
 });
 
 connectDB();
