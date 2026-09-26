@@ -1,38 +1,50 @@
 const Visitor = require("../models/Visitor");
 const Event = require("../models/Event");
 
+const {
+    isVisitorOnCooldown
+} = require("./timingService");
+
 
 // =====================================
 // FIND ELIGIBLE VISITORS
 // =====================================
 
-async function findEligibleVisitors(campaign) {
+async function findEligibleVisitors(
+    campaign
+) {
 
     // =====================================
-    // 1. FIND ONLINE VISITORS
+    // FIND ONLINE VISITORS
     // =====================================
 
-    const visitors = await Visitor.find({
-        online: true
-    });
+    const visitors =
+        await Visitor.find({
+            online: true
+        });
 
 
     const eligibleVisitors = [];
 
 
     // =====================================
-    // 2. CHECK EVERY VISITOR
+    // CHECK EACH VISITOR
     // =====================================
 
-    for (const visitor of visitors) {
+    for (
+        const visitor of visitors
+    ) {
 
         // =====================================
         // LOCATION CHECK
         // =====================================
 
         const locationMatches =
+
             !campaign.locations ||
+
             campaign.locations.length === 0 ||
+
             campaign.locations.some(
                 (location) =>
                     location.toLowerCase() ===
@@ -41,12 +53,14 @@ async function findEligibleVisitors(campaign) {
 
 
         if (!locationMatches) {
+
             continue;
+
         }
 
 
         // =====================================
-        // IMPRESSION COUNT
+        // FREQUENCY CHECK
         // =====================================
 
         const impressionCount =
@@ -63,14 +77,33 @@ async function findEligibleVisitors(campaign) {
             });
 
 
-        // =====================================
-        // FREQUENCY LIMIT
-        // =====================================
-
         if (
             impressionCount >=
             campaign.frequencyLimit
         ) {
+
+            continue;
+
+        }
+
+
+        // =====================================
+        // COOLDOWN CHECK
+        // =====================================
+
+        const onCooldown =
+    await isVisitorOnCooldown(
+
+        visitor.sessionId,
+
+        campaign._id,
+
+        campaign.cooldown
+
+    );
+
+
+        if (onCooldown) {
 
             continue;
 

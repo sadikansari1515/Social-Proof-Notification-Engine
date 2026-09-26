@@ -69,6 +69,15 @@ const campaignSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  delay: {
+    type: Number,
+    default: 0
+},
+
+cooldown: {
+    type: Number,
+    default: 30
+},
 });
 
 const Campaign = mongoose.model("Campaign", campaignSchema);

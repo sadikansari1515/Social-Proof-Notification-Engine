@@ -14,17 +14,21 @@ const {
 
 const router = express.Router();
 
-// =====================================
-// PURCHASE EVENT
-// =====================================
+// ============================================
+// POST /api/events/purchase
+// ============================================
 
 router.post("/purchase", async (req, res) => {
   try {
+    // ----------------------------------------
+    // 1. Get purchase data
+    // ----------------------------------------
+
     const { name, location, product, sessionId } = req.body;
 
-    // =====================================
-    // 1. VALIDATE
-    // =====================================
+    // ----------------------------------------
+    // 2. Validate request
+    // ----------------------------------------
 
     if (!name || !location || !product || !sessionId) {
       return res.status(400).json({
@@ -32,20 +36,53 @@ router.post("/purchase", async (req, res) => {
       });
     }
 
-    // =====================================
-    // 2. FIND CAMPAIGN
-    // =====================================
+    // ----------------------------------------
+    // 3. Find best campaign
+    // ----------------------------------------
 
     const campaign = await findBestCampaign(product, location);
 
+    // ----------------------------------------
+    // 4. No campaign found
+    // ----------------------------------------
+
     if (!campaign) {
+      // Purchase still happened,
+      // so save the purchase event.
+
+      await Event.create({
+        type: "purchase",
+
+        name,
+
+        location,
+
+        product,
+
+        sessionId,
+
+        metadata: {
+          source: "purchase",
+        },
+      });
+
       return res.status(200).json({
-        message: "No eligible campaign found",
+        message: "Purchase recorded but no eligible campaign found",
 
         notification: null,
       });
     }
-    
+
+    // ----------------------------------------
+    // 5. Find eligible visitors
+    // ----------------------------------------
+
+    const visitors = await findEligibleVisitors(campaign);
+
+    // ----------------------------------------
+    // 6. Save actual purchase event ONCE
+    // ----------------------------------------
+
     await Event.create({
       type: "purchase",
 
@@ -59,30 +96,27 @@ router.post("/purchase", async (req, res) => {
 
       metadata: {
         source: "purchase",
+        campaignId: campaign._id,
       },
     });
 
-    // =====================================
-    // 3. FIND VISITORS
-    // =====================================
-
-    const visitors = await findEligibleVisitors(campaign);
-
-    // =====================================
-    // 4. NO VISITORS
-    // =====================================
+    // ----------------------------------------
+    // 7. No eligible visitors
+    // ----------------------------------------
 
     if (visitors.length === 0) {
       return res.status(200).json({
-        message: "Campaign found but no eligible visitors",
+        message: "Purchase recorded but no eligible visitors found",
 
-        notification: null,
+        campaignId: campaign._id,
+
+        visitorsNotified: 0,
       });
     }
 
-    // =====================================
-    // 5. CREATE BASE NOTIFICATION
-    // =====================================
+    // ----------------------------------------
+    // 8. Create notification data
+    // ----------------------------------------
 
     const notificationData = createPurchaseNotification(
       {
@@ -90,54 +124,52 @@ router.post("/purchase", async (req, res) => {
         location,
         product,
       },
+
       campaign,
     );
 
-    // =====================================
-    // 6. SEND TO EACH VISITOR
-    // =====================================
+    // ----------------------------------------
+    // 9. Send notification to visitors
+    // ----------------------------------------
 
-    for (const visitor of visitors) {
-      const notification = await Notification.create({
-        ...notificationData,
+    await Promise.all(
+      visitors.map(async (visitor) => {
+        // Create notification
+        // specifically for this visitor
 
-        sessionId: visitor.sessionId,
-      });
+        const notification = await Notification.create({
+          ...notificationData,
 
-      // Send notification
-      sendNotificationToVisitor(
-        req.app.get("io"),
+          sessionId: visitor.sessionId,
+        });
 
-        visitor,
+        // --------------------------------
+        // Delay
+        // --------------------------------
 
-        notification,
-      );
+        if (campaign.delay > 0) {
+          await new Promise((resolve) => {
+            setTimeout(resolve, campaign.delay * 1000);
+          });
+        }
 
-      // Save event
-      await Event.create({
-        type: "purchase",
+        // --------------------------------
+        // Send through Socket.IO
+        // --------------------------------
 
-        name,
+        sendNotificationToVisitor(
+          req.app.get("io"),
 
-        location,
+          visitor,
 
-        product,
+          notification,
+        );
+      }),
+    );
 
-        notificationId: notification._id,
-
-        sessionId: visitor.sessionId,
-
-        metadata: {
-          campaignId: campaign._id,
-
-          sourceSessionId: sessionId,
-        },
-      });
-    }
-
-    // =====================================
-    // 7. RESPONSE
-    // =====================================
+    // ----------------------------------------
+    // 10. Response
+    // ----------------------------------------
 
     res.status(201).json({
       message: "Purchase event processed successfully",
