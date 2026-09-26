@@ -34,7 +34,11 @@ const campaignSchema = new mongoose.Schema({
     type: Number,
     default: 1,
   },
-
+  weight: {
+    type: Number,
+    default: 1,
+    min: 1
+  },  
   // Maximum notifications per visitor
   frequencyLimit: {
     type: Number,

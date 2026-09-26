@@ -1,86 +1,127 @@
 const Campaign = require("../models/Campaign");
 
+// ============================================
+// Find eligible campaigns
+// ============================================
 
-async function findBestCampaign(
-    product,
-    location
-) {
+async function findEligibleCampaigns(product, location) {
+  const now = new Date();
 
-    const now = new Date();
+  const campaigns = await Campaign.find({
+    active: true,
 
+    product: product,
 
-    const campaigns =
-        await Campaign.find({
+    startDate: {
+      $lte: now,
+    },
 
-            active: true,
+    $or: [
+      {
+        endDate: null,
+      },
+      {
+        endDate: {
+          $gte: now,
+        },
+      },
+    ],
+  });
 
-            product: product,
+  // ----------------------------------------
+  // Location filtering
+  // ----------------------------------------
 
-            startDate: {
-                $lte: now
-            },
+  const eligibleCampaigns = campaigns.filter((campaign) => {
+    // Empty locations means
+    // all locations are allowed
 
-            $or: [
-
-                {
-                    endDate: null
-                },
-
-                {
-                    endDate: {
-                        $gte: now
-                    }
-                }
-
-            ]
-
-        });
-
-
-    const eligibleCampaigns =
-        campaigns.filter(
-            (campaign) => {
-
-                if (
-                    !campaign.locations ||
-                    campaign.locations.length === 0
-                ) {
-
-                    return true;
-
-                }
-
-
-                return campaign.locations.some(
-                    (campaignLocation) =>
-                        campaignLocation.toLowerCase() ===
-                        location.toLowerCase()
-                );
-
-            }
-        );
-
-
-    if (
-        eligibleCampaigns.length === 0
-    ) {
-
-        return null;
-
+    if (!campaign.locations || campaign.locations.length === 0) {
+      return true;
     }
 
-
-    eligibleCampaigns.sort(
-        (a, b) =>
-            b.priority - a.priority
+    return campaign.locations.some(
+      (campaignLocation) =>
+        campaignLocation.toLowerCase() === location.toLowerCase(),
     );
+  });
 
-
-    return eligibleCampaigns[0];
-
+  return eligibleCampaigns;
 }
 
+// ============================================
+// Weighted random selection
+// ============================================
+
+function selectWeightedCampaign(campaigns) {
+  if (campaigns.length === 0) {
+    return null;
+  }
+
+  // ----------------------------------------
+  // Find highest priority
+  // ----------------------------------------
+
+  const highestPriority = Math.max(
+    ...campaigns.map((campaign) => campaign.priority),
+  );
+
+  // ----------------------------------------
+  // Only highest priority campaigns
+  // participate in random selection
+  // ----------------------------------------
+
+  const priorityCampaigns = campaigns.filter(
+    (campaign) => campaign.priority === highestPriority,
+  );
+
+  // ----------------------------------------
+  // Calculate total weight
+  // ----------------------------------------
+
+  const totalWeight = priorityCampaigns.reduce(
+    (total, campaign) => total + (campaign.weight || 1),
+    0,
+  );
+
+  // ----------------------------------------
+  // Random number
+  // ----------------------------------------
+
+  let random = Math.random() * totalWeight;
+
+  // ----------------------------------------
+  // Select campaign
+  // ----------------------------------------
+
+  for (const campaign of priorityCampaigns) {
+    random -= campaign.weight || 1;
+
+    if (random <= 0) {
+      return campaign;
+    }
+  }
+
+  // Fallback
+  return priorityCampaigns[priorityCampaigns.length - 1];
+}
+
+// ============================================
+// Main function
+// ============================================
+
+async function findBestCampaign(product, location) {
+  const campaigns = await findEligibleCampaigns(product, location);
+
+  if (campaigns.length === 0) {
+    return null;
+  }
+
+  return selectWeightedCampaign(campaigns);
+}
 
 module.exports = {
-    findBestCampaign
+  findEligibleCampaigns,
+  selectWeightedCampaign,
+  findBestCampaign,
 };

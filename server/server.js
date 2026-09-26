@@ -20,6 +20,9 @@ const campaignRoutes = require("./routes/campaignRoutes");
 
 const Visitor = require("./models/Visitor");
 
+const authRoutes =
+    require("./routes/authRoutes");
+
 const app = express();
 
 const server = http.createServer(app);
@@ -48,6 +51,11 @@ app.use("/api/events", eventRoutes);
 app.use("/api/analytics", analyticsRoutes);
 
 app.use("/api/campaigns", campaignRoutes);
+
+app.use(
+    "/api/auth",
+    authRoutes
+);
 
 io.on("connection", (socket) => {
   console.log("User connected:", socket.id);
