@@ -1,89 +1,89 @@
 const mongoose = require("mongoose");
 
 const campaignSchema = new mongoose.Schema({
-  // Campaign name
-  name: {
-    type: String,
-    required: true,
-    trim: true,
-  },
 
-  // Product this campaign belongs to
-  product: {
-    type: String,
-    required: true,
-    trim: true,
-  },
+    // ========================================
+    // Campaign Owner
+    // ========================================
 
-  // Notification message
-  message: {
-    type: String,
-    required: true,
-    trim: true,
-  },
+    userId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        required: true
+    },
 
-  // Locations where campaign should be shown
-  locations: {
-    type: [String],
-    default: [],
-  },
+    name: {
+        type: String,
+        required: true,
+        trim: true
+    },
 
-  // Campaign priority
-  // Higher number = higher priority
-  priority: {
-    type: Number,
-    default: 1,
-  },
-  weight: {
-    type: Number,
-    default: 1,
-    min: 1
-  },  
-  // Maximum notifications per visitor
-  frequencyLimit: {
-    type: Number,
-    default: 3,
-  },
+    product: {
+        type: String,
+        required: true,
+        trim: true
+    },
 
-  // Delay before notification appears
-  delay: {
-    type: Number,
-    default: 0,
-  },
+    message: {
+        type: String,
+        required: true,
+        trim: true
+    },
 
-  // Campaign status
-  active: {
-    type: Boolean,
-    default: true,
-  },
+    locations: {
+        type: [String],
+        default: []
+    },
 
-  // Campaign start
-  startDate: {
-    type: Date,
-    default: Date.now,
-  },
+    active: {
+        type: Boolean,
+        default: true
+    },
 
-  // Campaign end
-  endDate: {
-    type: Date,
-    default: null,
-  },
+    priority: {
+        type: Number,
+        default: 1
+    },
 
-  createdAt: {
-    type: Date,
-    default: Date.now,
-  },
-  delay: {
-    type: Number,
-    default: 0
-},
+    weight: {
+        type: Number,
+        default: 1,
+        min: 1
+    },
 
-cooldown: {
-    type: Number,
-    default: 30
-},
+    frequencyLimit: {
+        type: Number,
+        default: 3
+    },
+
+    delay: {
+        type: Number,
+        default: 0
+    },
+
+    cooldown: {
+        type: Number,
+        default: 30
+    },
+
+    startDate: {
+        type: Date,
+        default: Date.now
+    },
+
+    endDate: {
+        type: Date,
+        default: null
+    },
+
+    createdAt: {
+        type: Date,
+        default: Date.now
+    }
+
 });
 
-const Campaign = mongoose.model("Campaign", campaignSchema);
+const Campaign =
+    mongoose.model("Campaign", campaignSchema);
 
 module.exports = Campaign;

@@ -6,6 +6,8 @@ const User = require("../models/User");
 
 const router = express.Router();
 
+const protect =
+    require("../middleware/authMiddleware");
 
 // ============================================
 // REGISTER
@@ -268,5 +270,18 @@ router.post("/login", async (req, res) => {
 
 });
 
+router.get("/me", protect, async (req, res) => {
+
+    res.status(200).json({
+
+        message:
+            "You are authenticated",
+
+        user:
+            req.user
+
+    });
+
+});
 
 module.exports = router;

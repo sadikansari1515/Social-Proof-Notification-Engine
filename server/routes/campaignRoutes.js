@@ -2,34 +2,20 @@ const express = require("express");
 
 const Campaign = require("../models/Campaign");
 
+const protect = require("../middleware/authMiddleware");
+
 const router = express.Router();
 
-// =====================================
+// ============================================
 // CREATE CAMPAIGN
-// =====================================
+// ============================================
 
-router.post("/", async (req, res) => {
+router.post("/", protect, async (req, res) => {
   try {
-    const { name, product, message, locations, active, startDate, endDate } =
-      req.body;
-
-    if (!name || !product || !message) {
-      return res.status(400).json({
-        message: "name, product and message are required",
-      });
-    }
-
     const campaign = await Campaign.create({
-      name,
-      product,
-      message,
-      locations: locations || [],
+      ...req.body,
 
-      active: active !== undefined ? active : true,
-
-      startDate: startDate || new Date(),
-
-      endDate: endDate || null,
+      userId: req.user._id,
     });
 
     res.status(201).json({
@@ -38,7 +24,7 @@ router.post("/", async (req, res) => {
       campaign,
     });
   } catch (error) {
-    console.error(error);
+    console.error("Create campaign error:", error);
 
     res.status(500).json({
       message: "Failed to create campaign",
@@ -48,19 +34,23 @@ router.post("/", async (req, res) => {
   }
 });
 
-// =====================================
-// GET ALL CAMPAIGNS
-// =====================================
+// ============================================
+// GET ALL USER CAMPAIGNS
+// ============================================
 
-router.get("/", async (req, res) => {
+router.get("/", protect, async (req, res) => {
   try {
-    const campaigns = await Campaign.find().sort({
+    const campaigns = await Campaign.find({
+      userId: req.user._id,
+    }).sort({
       createdAt: -1,
     });
 
-    res.json(campaigns);
+    res.status(200).json({
+      campaigns,
+    });
   } catch (error) {
-    console.error(error);
+    console.error("Get campaigns error:", error);
 
     res.status(500).json({
       message: "Failed to fetch campaigns",
@@ -70,13 +60,17 @@ router.get("/", async (req, res) => {
   }
 });
 
-// =====================================
+// ============================================
 // GET SINGLE CAMPAIGN
-// =====================================
+// ============================================
 
-router.get("/:id", async (req, res) => {
+router.get("/:id", protect, async (req, res) => {
   try {
-    const campaign = await Campaign.findById(req.params.id);
+    const campaign = await Campaign.findOne({
+      _id: req.params.id,
+
+      userId: req.user._id,
+    });
 
     if (!campaign) {
       return res.status(404).json({
@@ -84,9 +78,11 @@ router.get("/:id", async (req, res) => {
       });
     }
 
-    res.json(campaign);
+    res.status(200).json({
+      campaign,
+    });
   } catch (error) {
-    console.error(error);
+    console.error("Get campaign error:", error);
 
     res.status(500).json({
       message: "Failed to fetch campaign",
@@ -96,16 +92,27 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-// =====================================
+// ============================================
 // UPDATE CAMPAIGN
-// =====================================
+// ============================================
 
-router.put("/:id", async (req, res) => {
+router.put("/:id", protect, async (req, res) => {
   try {
-    const campaign = await Campaign.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true,
-    });
+    const campaign = await Campaign.findOneAndUpdate(
+      {
+        _id: req.params.id,
+
+        userId: req.user._id,
+      },
+
+      req.body,
+
+      {
+        new: true,
+
+        runValidators: true,
+      },
+    );
 
     if (!campaign) {
       return res.status(404).json({
@@ -113,13 +120,13 @@ router.put("/:id", async (req, res) => {
       });
     }
 
-    res.json({
+    res.status(200).json({
       message: "Campaign updated successfully",
 
       campaign,
     });
   } catch (error) {
-    console.error(error);
+    console.error("Update campaign error:", error);
 
     res.status(500).json({
       message: "Failed to update campaign",
@@ -129,13 +136,17 @@ router.put("/:id", async (req, res) => {
   }
 });
 
-// =====================================
+// ============================================
 // DELETE CAMPAIGN
-// =====================================
+// ============================================
 
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", protect, async (req, res) => {
   try {
-    const campaign = await Campaign.findByIdAndDelete(req.params.id);
+    const campaign = await Campaign.findOneAndDelete({
+      _id: req.params.id,
+
+      userId: req.user._id,
+    });
 
     if (!campaign) {
       return res.status(404).json({
@@ -143,11 +154,11 @@ router.delete("/:id", async (req, res) => {
       });
     }
 
-    res.json({
+    res.status(200).json({
       message: "Campaign deleted successfully",
     });
   } catch (error) {
-    console.error(error);
+    console.error("Delete campaign error:", error);
 
     res.status(500).json({
       message: "Failed to delete campaign",
